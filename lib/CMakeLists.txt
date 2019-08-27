@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.2.2)
 
+include(GNUInstallDirs)
+
 # Get the HEAD SHA1 commit message
 get_commit_string(LIBFACTER_COMMIT)
 
@@ -273,7 +275,7 @@ endif()
 if (WIN32)
     set(LIBFACTER_INSTALL_DESTINATION bin)
 else()
-    set(LIBFACTER_INSTALL_DESTINATION lib${LIB_SUFFIX})
+    set(LIBFACTER_INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR})
 endif()
 
 if (JRUBY_SUPPORT)
