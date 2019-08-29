@@ -1,33 +1,51 @@
+language: cpp
 sudo: required
-services:
-  - docker
+
+os:
+  - linux
+  - osx
+
+compiler:
+  - gcc
+
+addons:
+  apt:
+    packages:
+      - libyaml-cpp-dev
+      - libboost-all-dev
+      - libblkid-dev
 
 before_install:
-  - docker pull gcr.io/cpp-projects/cpp-ci:1
+    #  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then brew update          ; fi
+  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then brew install gcc     ; fi
+  - wget https://github.com/puppetlabs/leatherman/releases/download/${LEATHERMAN_VERSION}/leatherman-dynamic.tar.gz
+  - sudo tar xzvf leatherman-dynamic.tar.gz --strip 1 -C /
+  - wget https://github.com/puppetlabs/cpp-hocon/releases/download/${CPPHOCON_VERSION}/cpp-hocon-dynamic.tar.gz
+  - sudo tar xzvf cpp-hocon-dynamic.tar.gz --strip 1 -C /
 
 script:
-  - >
-    docker run -v `pwd`:/facter gcr.io/cpp-projects/cpp-ci:1 /bin/bash -c "
-    wget https://github.com/puppetlabs/leatherman/releases/download/${LEATHERMAN_VERSION}/leatherman-dynamic.tar.gz &&
-    tar xzvf leatherman-dynamic.tar.gz --strip 1 -C / &&
-    wget https://github.com/puppetlabs/cpp-hocon/releases/download/${CPPHOCON_VERSION}/cpp-hocon-dynamic.tar.gz &&
-    tar xzvf cpp-hocon-dynamic.tar.gz --strip 1 -C / &&
-    cd /facter &&
-    cmake $EXTRA_VARS . &&
-    mkdir dest &&
-    make $TARGET DESTDIR=/facter/dest VERBOSE=1 -j2 &&
-    { [[ '$COVERALLS' != 'ON' ]] || coveralls --gcov-options '\-lp' -r . -b . -e src -e vendor >/dev/null || true; }
-    "
+  - mkdir build && cd build
+  - cmake ..
+  - make all test install -j$(expr $(nproc) - 1)
+
+cache:
+  timeout: 600
+  ccache: true
+  directories:
+    - $HOME/Library/Caches/Homebrew
+
+before_cache:
+  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then brew cleanup; fi
 
 env:
   global:
     - LEATHERMAN_VERSION=1.5.5
     - CPPHOCON_VERSION=0.1.8
-  matrix:
-    - TARGET=cpplint
-    - TARGET=cppcheck
-    - TARGET="all test install ARGS=-V" EXTRA_VARS=""
-    - TARGET="all test install ARGS=-V" EXTRA_VARS="-DCMAKE_BUILD_TYPE=Debug -DCOVERALLS=ON" COVERALLS=ON
+  #matrix:
+    #- TARGET=cpplint
+    #- TARGET=cppcheck
+    #- TARGET="all test install ARGS=-V" EXTRA_VARS=""
+    #- TARGET="all test install ARGS=-V" EXTRA_VARS="-DCMAKE_BUILD_TYPE=Debug -DCOVERALLS=ON" COVERALLS=ON
 
 notifications:
   email: false
